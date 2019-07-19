@@ -9,7 +9,8 @@ import sys
 import torch
 USE_TENSORBOARD = True
 try:
-  import tensorboardX
+  #import tensorboardX
+  import torch.utils.tensorboard as tensorboardX
   print('Using tensorboardX')
 except:
   USE_TENSORBOARD = False
