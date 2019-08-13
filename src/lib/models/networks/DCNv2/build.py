@@ -2,42 +2,36 @@ import os
 import torch
 from torch.utils.ffi import create_extension
 
+this_file = os.path.dirname(__file__)
 
-sources = ['src/dcn_v2.c']
-headers = ['src/dcn_v2.h']
+sources = ['src/deform_conv.c']
+headers = ['src/deform_conv.h']
 defines = []
 with_cuda = False
 
-extra_objects = []
 if torch.cuda.is_available():
     print('Including CUDA code.')
-    sources += ['src/dcn_v2_cuda.c']
-    headers += ['src/dcn_v2_cuda.h']
+    sources += ['src/deform_conv_cuda.c']
+    headers += ['src/deform_conv_cuda.h']
     defines += [('WITH_CUDA', None)]
-    extra_objects += ['src/cuda/dcn_v2_im2col_cuda.cu.o']
-    extra_objects += ['src/cuda/dcn_v2_psroi_pooling_cuda.cu.o']
     with_cuda = True
-else:
-    raise ValueError('CUDA is not available')
-
-extra_compile_args = ['-fopenmp', '-std=c99']
 
 this_file = os.path.dirname(os.path.realpath(__file__))
 print(this_file)
-sources = [os.path.join(this_file, fname) for fname in sources]
-headers = [os.path.join(this_file, fname) for fname in headers]
+extra_objects = ['src/deform_conv_cuda_kernel.cu.so']
 extra_objects = [os.path.join(this_file, fname) for fname in extra_objects]
 
 ffi = create_extension(
-    '_ext.dcn_v2',
+    '_ext.deform_conv',
     headers=headers,
     sources=sources,
     define_macros=defines,
     relative_to=__file__,
     with_cuda=with_cuda,
     extra_objects=extra_objects,
-    extra_compile_args=extra_compile_args
+    extra_compile_args=['-std=c++11']
 )
 
-if __name__ == '__main__':
-    ffi.build()
+assert torch.cuda.is_available(), 'Please install CUDA for GPU support.'
+ffi.build()
+

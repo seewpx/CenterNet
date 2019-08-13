@@ -6,14 +6,13 @@ from __future__ import division
 import torch
 from torch.autograd import Function
 
-from ._ext import dcn_v2 as _backend
-# from _ext import dcn_v2_double as _backend
+from _ext import modulated_dcn as _backend
 
 
-class DCNv2Function(Function):
+class ModulatedDeformConvFunction(Function):
 
     def __init__(self, stride, padding, dilation=1, deformable_groups=1):
-        super(DCNv2Function, self).__init__()
+        super(ModulatedDeformConvFunction, self).__init__()
         self.stride = stride
         self.padding = padding
         self.dilation = dilation
@@ -26,7 +25,7 @@ class DCNv2Function(Function):
             self.save_for_backward(input, offset, mask, weight, bias)
         output = input.new(*self._infer_shape(input, weight))
         self._bufs = [input.new(), input.new()]
-        _backend.dcn_v2_cuda_forward(input, weight,
+        _backend.modulated_deform_conv_cuda_forward(input, weight,
                                      bias, self._bufs[0],
                                      offset, mask,
                                      output, self._bufs[1],
@@ -46,7 +45,7 @@ class DCNv2Function(Function):
         grad_mask = mask.new(*mask.size()).zero_()
         grad_weight = weight.new(*weight.size()).zero_()
         grad_bias = bias.new(*bias.size()).zero_()
-        _backend.dcn_v2_cuda_backward(input, weight,
+        _backend.modulated_deform_conv_cuda_backward(input, weight,
                                       bias, self._bufs[0],
                                       offset, mask,
                                       self._bufs[1],
@@ -73,7 +72,7 @@ class DCNv2Function(Function):
         return (n, channels_out, height_out, width_out)
 
 
-class DCNv2PoolingFunction(Function):
+class DeformRoIPoolingFunction(Function):
 
     def __init__(self,
                  spatial_scale,
@@ -84,7 +83,7 @@ class DCNv2PoolingFunction(Function):
                  part_size=None,
                  sample_per_part=4,
                  trans_std=.0):
-        super(DCNv2PoolingFunction, self).__init__()
+        super(DeformRoIPoolingFunction, self).__init__()
         self.spatial_scale = spatial_scale
         self.pooled_size = pooled_size
         self.output_dim = output_dim
@@ -102,15 +101,19 @@ class DCNv2PoolingFunction(Function):
 
         output = data.new(*self._infer_shape(data, rois))
         output_count = data.new(*self._infer_shape(data, rois))
-        _backend.dcn_v2_psroi_pooling_cuda_forward(data, rois, offset,
+        _backend.deform_psroi_pooling_cuda_forward(data, rois, offset,
                                                    output, output_count,
                                                    self.no_trans, self.spatial_scale,
                                                    self.output_dim, self.group_size,
                                                    self.pooled_size, self.part_size,
                                                    self.sample_per_part, self.trans_std)
 
-        if data.requires_grad or rois.requires_grad or offset.requires_grad:
-            self.save_for_backward(data, rois, offset, output_count)
+        # if data.requires_grad or rois.requires_grad or offset.requires_grad:
+        #     self.save_for_backward(data, rois, offset, output_count)
+        self.data = data
+        self.rois = rois
+        self.offset = offset
+        self.output_count = output_count
 
         return output
 
@@ -118,11 +121,15 @@ class DCNv2PoolingFunction(Function):
         if not grad_output.is_cuda:
             raise NotImplementedError
 
-        data, rois, offset, output_count = self.saved_tensors
+        # data, rois, offset, output_count = self.saved_tensors
+        data = self.data
+        rois = self.rois
+        offset = self.offset
+        output_count = self.output_count
         grad_input = data.new(*data.size()).zero_()
         grad_offset = offset.new(*offset.size()).zero_()
 
-        _backend.dcn_v2_psroi_pooling_cuda_backward(grad_output,
+        _backend.deform_psroi_pooling_cuda_backward(grad_output,
                                                     data,
                                                     rois,
                                                     offset,
@@ -137,7 +144,7 @@ class DCNv2PoolingFunction(Function):
                                                     self.part_size,
                                                     self.sample_per_part,
                                                     self.trans_std)
-        return grad_input, None, grad_offset
+        return grad_input, torch.zeros(rois.shape).cuda(), grad_offset
 
     def _infer_shape(self, data, rois):
         # _, c, h, w = data.shape[:4]

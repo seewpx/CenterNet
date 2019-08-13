@@ -1,60 +1,42 @@
-## Deformable Convolutional Networks V2 with Pytorch
+# Deformable-ConvNets-V2 in PyTorch
 
-### Build
-```bash
-    ./make.sh         # build
-    python test.py    # run examples and gradient check 
+This repo is an implementation of [Deformable Convolution V2](https://arxiv.org/abs/1811.11168).
+Ported from the original [MXNet implementation](https://github.com/msracver/Deformable-ConvNets/tree/master/DCNv2_op).
+
+Refer to [mmdetection branch](https://github.com/chengdazhi/Deformable-Convolution-V2-PyTorch/tree/mmdetection) in this repo for a complete framework. Results of DCNv2 based on mmdetection code base can be found at [model zoo](https://github.com/chengdazhi/Deformable-Convolution-V2-PyTorch/blob/mmdetection/MODEL_ZOO.md#deformable-conv-v2). Many thanks to [mmdetection](https://github.com/open-mmlab/mmdetection) for their strong and clean framework.
+
+Operators in master branch are compatible with pytorch_v0.4.1. For operators on pytorch v1.0.0 (implemented by [Jiarui Xu](https://github.com/xvjiarui)), please refer to [pytorch_1.0.0 branch](https://github.com/chengdazhi/Deformable-Convolution-V2-PyTorch/tree/pytorch_1.0.0).
+
+Thanks to [Kai Chen](https://github.com/hellock) and other contributors from mmlab, DCNv2 is now included in the official mmdetection repo based on the master branch of this one. It is now written with the new cpp extension apis and it supports both PyTorch 0.4.1 and 1.0, with some minor speed and memory optimization. Results and models can be found at https://github.com/open-mmlab/mmdetection/blob/master/MODEL_ZOO.md#deformable-convolution-v2.
+
+## Build
+
+```
+sh make.sh
 ```
 
-### An Example
-- deformable conv
-```python
-    from dcn_v2 import DCN
-    input = torch.randn(2, 64, 128, 128).cuda()
-    # wrap all things (offset and mask) in DCN
-    dcn = DCN(64, 64, kernel_size=(3,3), stride=1, padding=1, deformable_groups=2).cuda()
-    output = dcn(input)
-    print(output.shape)
-```
-- deformable roi pooling
-```python
-    from dcn_v2 import DCNPooling
-    input = torch.randn(2, 32, 64, 64).cuda()
-    batch_inds = torch.randint(2, (20, 1)).cuda().float()
-    x = torch.randint(256, (20, 1)).cuda().float()
-    y = torch.randint(256, (20, 1)).cuda().float()
-    w = torch.randint(64, (20, 1)).cuda().float()
-    h = torch.randint(64, (20, 1)).cuda().float()
-    rois = torch.cat((batch_inds, x, y, x + w, y + h), dim=1)
+See `test.py` and `test_modulated.py` for example usage.
 
-    # mdformable pooling (V2)
-    # wrap all things (offset and mask) in DCNPooling
-    dpooling = DCNPooling(spatial_scale=1.0 / 4,
-                         pooled_size=7,
-                         output_dim=32,
-                         no_trans=False,
-                         group_size=1,
-                         trans_std=0.1).cuda()
+## Notice
 
-    dout = dpooling(input, rois)
-```
+This repo provides the deformable conv layer which can reproduce the results in the Deformable ConvNets v2 paper. The major changes are as follows:
 
-### Known Issues:
+* To better handle occasions where sampling locations are outside of the image boundary.
 
-- [x] Gradient check w.r.t offset (solved)
-- [ ] Backward is not reentrant (minor)
+    In the previous operator, if the sampling location is outside of the feature map boundary, its sampled value would be zero. Thus, the gradient with respect to learnable offset would be zero. We found such a scheme may deteriate the performance in ImageNet classification (perhaps because the feature maps are of low resolution). For object detection on COCO, both the previous and the updated operators deliver the same results.
 
-This is an adaption of the official [Deformable-ConvNets](https://github.com/msracver/Deformable-ConvNets/tree/master/DCNv2_op).
+    In the new operator, if the sampling location is within one pixel outside of the feature map boundary, bilinear sampling would also be applied. And gradient with respect to learnable offset can be non zero for such locations. This is implemented by padding zeros (by one row/column) outside of the boundaries of feature maps, and performing bilinear sampling on the padded feature maps.
 
-<s>I have ran the gradient check for many times with DOUBLE type. Every tensor **except offset** passes.
-However, when I set the offset to 0.5, it passes. I'm still wondering what cause this problem. Is it because some
-non-differential points? </s>
 
-Update: all gradient check passes with double precision. 
+* The efficiency of processing multiple images in a mini-batch is considerably improved.
 
-Another issue is that it raises `RuntimeError: Backward is not reentrant`. However, the error is very small (`<1e-7` for 
-float `<1e-15` for double), 
-so it may not be a serious problem (?)
+    Both the previous and the updated operators follow the following computation pipeline (illustrated by a 3x3 deformable convolution with input data of NxCxHxW and output data of NxC'xHxW):
 
-Please post an issue or PR if you have any comments.
-    
+      for i in range(N/S):
+          step 1 (slicing): slicing the input data at the batch dimension from i*S to (i+1)*S, input (NxCxHxW) -> sliced input (SxCxHxW)
+          step 2 (deformable im2col): sliced input (SxCxHxW)+sliced offset (Sx18xHxW) -> column (Cx9xSxHxW)
+          step 3 (MatMul&reshape): weight matrix (C'x 9C) * column (9CxSHW) -> temp sliced output (C'xSxHxW) -> sliced output (SxC'xHxW)
+          step 4 (Merge): merge sliced output to form the whole output data (NxC'xHxW) 
+      end
+
+    In the previous operator, S is fixed as 1. In the updated operator, S can be set by the *im2col_step* parameter, whose default value is min(N, 64). The updated operator is significantly faster than the existing one when the image batch size is large.
