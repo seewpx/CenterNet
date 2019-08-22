@@ -31,6 +31,7 @@ class PrefetchDataset(torch.utils.data.Dataset):
     img_id = self.images[index]
     img_info = self.load_image_func(ids=[img_id])[0]
     img_path = os.path.join(self.img_dir, img_info['file_name'])
+    #print(img_path)
     image = cv2.imread(img_path)
     images, meta = {}, {}
     for scale in opt.test_scales:

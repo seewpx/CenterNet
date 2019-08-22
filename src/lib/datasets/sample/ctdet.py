@@ -39,7 +39,7 @@ class CTDetDataset(data.Dataset):
     height, width = img.shape[0], img.shape[1]
     c = np.array([img.shape[1] / 2., img.shape[0] / 2.], dtype=np.float32)
     if self.opt.keep_res:
-      input_h = (height | self.opt.pad) + 1
+      input_h = (height | self.opt.pad) + 1    #对位取或，很trick
       input_w = (width | self.opt.pad) + 1
       s = np.array([input_w, input_h], dtype=np.float32)
     else:
