@@ -12,3 +12,4 @@ cd ..
 
 python main.py ctdet --exp_id neu_resdcn_18 --arch resdcn_18 --batch_size 1 --lr 2.5e-4 --dataset neu_det --load_model ../models/ctdet_coco_resdcn18.pth --gpus 0
 python main.py ctdet --exp_id pascal_resdcn18_384 --arch resdcn_18 --dataset pascal --num_epochs 70 --lr_step 45,60
+python main.py ctdet --exp_id neu_hg_256 --arch hourglass --batch_size 24  --dataset neu_det  --load_model ../models/ctdet_coco_hg.pth --lr 2.5e-4  --gpus 0

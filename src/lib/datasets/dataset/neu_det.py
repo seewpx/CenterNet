@@ -27,18 +27,18 @@ class NET_DET(data.Dataset):
     self.annot_path = os.path.join(
       self.data_dir, # 'ANNOTATIONS', 
       'box_voc_val.json') #.format(_ann_name[split])
-    self.max_objs = 50
+    self.max_objs = 20
     self.class_name = ['__background__', "crazing", "inclusion", "patches", 
     "pitted_surface", "rolled-in_scale", "scratches"]
     self._valid_ids = np.arange(1, 7, dtype=np.int32)
     self.cat_ids = {v: i for i, v in enumerate(self._valid_ids)}
     self._data_rng = np.random.RandomState(123)
-    self._eig_val = np.array([0.2141788, 0.01817699, 0.00341571],
+    self._eig_val = np.array([1.33974423e-01,  1.99787961e-18, -8.03322491e-18],
                              dtype=np.float32)
     self._eig_vec = np.array([
-        [-0.58752847, -0.69563484, 0.41340352],
-        [-0.5832747, 0.00994535, -0.81221408],
-        [-0.56089297, 0.71832671, 0.41158938]
+        [0.57735027,  0.57735027,  0.57735027],
+        [-0.73067619,  0.68090778,  0.04976841],
+        [-0.36438849, -0.4505899 ,  0.81497839]
     ], dtype=np.float32)
     self.split = split
     self.opt = opt
