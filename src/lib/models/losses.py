@@ -46,13 +46,22 @@ def _neg_loss(pred, gt):
       pred (batch x c x h x w)
       gt_regr (batch x c x h x w)
   '''
+  ##DEBUG##!: pred.shape='torch.Size([1, 6, 56, 56])'
+  ##DEBUG##!: gt.shape='torch.Size([1, 6, 50, 50])'
+  #print("!##DEBUG##!: pred.shape=\'{}\'".format(pred.shape))
+  #print("!##DEBUG##!: gt.shape=\'{}\'".format(gt.shape))
   pos_inds = gt.eq(1).float()
   neg_inds = gt.lt(1).float()
 
   neg_weights = torch.pow(1 - gt, 4)
 
   loss = 0
-
+  #print("!##DEBUG##!: torch.log(pred).shape=\'{}\'".format(torch.log(pred).shape))
+  #print("!##DEBUG##!: torch.pow(1 - pred, 2).shape=\'{}\'".format(torch.pow(1 - pred, 2).shape))
+  #print("!##DEBUG##!: pos_inds.shape=\'{}\'".format(pos_inds.shape))
+  ##DEBUG##!: torch.log(pred).shape='torch.Size([1, 6, 56, 56])'
+  ##DEBUG##!: torch.pow(1 - pred, 2).shape='torch.Size([1, 6, 56, 56])'
+  ##DEBUG##!: pos_inds.shape='torch.Size([1, 6, 50, 50])'
   pos_loss = torch.log(pred) * torch.pow(1 - pred, 2) * pos_inds
   neg_loss = torch.log(1 - pred) * torch.pow(pred, 2) * neg_weights * neg_inds
 

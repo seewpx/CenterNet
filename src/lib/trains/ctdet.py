@@ -26,6 +26,8 @@ class CtdetLoss(torch.nn.Module):
     self.opt = opt
 
   def forward(self, outputs, batch):
+    #print("!##DEBUG##!: outputs.shape=\'{}\'".format(len(outputs)))
+    #print("!##DEBUG##!: batch.shape=\'{}\'".format(len(batch)))
     opt = self.opt
     hm_loss, wh_loss, off_loss = 0, 0, 0
     for s in range(opt.num_stacks):
@@ -45,7 +47,8 @@ class CtdetLoss(torch.nn.Module):
           batch['reg'].detach().cpu().numpy(), 
           batch['ind'].detach().cpu().numpy(), 
           output['reg'].shape[3], output['reg'].shape[2])).to(opt.device)
-
+      #print("!##DEBUG##!: outputs.shape=\'{}\'".format(output[]))
+      #print("!##DEBUG##!: batch.shape=\'{}\'".format(batch.shape))
       hm_loss += self.crit(output['hm'], batch['hm']) / opt.num_stacks
       if opt.wh_weight > 0:
         if opt.dense_wh:

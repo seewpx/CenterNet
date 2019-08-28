@@ -31,11 +31,11 @@ class CTDetDataset(data.Dataset):
     file_name = self.coco.loadImgs(ids=[img_id])[0]['file_name']
     img_path = os.path.join(self.img_dir, file_name)
     ann_ids = self.coco.getAnnIds(imgIds=[img_id])
-    anns = self.coco.loadAnns(ids=ann_ids)
+    anns = self.coco.loadAnns(ids=ann_ids)     #用的时候先测试一下这些coco函数有没有正常工作
     num_objs = min(len(anns), self.max_objs)
-
     img = cv2.imread(img_path)
-
+    if img is None:
+      print("\n!##DEBUG##!: img_path=\'{}\'.\n".format(img_path))
     height, width = img.shape[0], img.shape[1]
     c = np.array([img.shape[1] / 2., img.shape[0] / 2.], dtype=np.float32)
     if self.opt.keep_res:
@@ -67,13 +67,13 @@ class CTDetDataset(data.Dataset):
         c[0] =  width - c[0] - 1
         
 
-    trans_input = get_affine_transform(
+    trans_input = get_affine_transform(      #进行仿射变换
       c, s, 0, [input_w, input_h])
     inp = cv2.warpAffine(img, trans_input, 
                          (input_w, input_h),
                          flags=cv2.INTER_LINEAR)
     inp = (inp.astype(np.float32) / 255.)
-    if self.split == 'train' and not self.opt.no_color_aug:
+    if self.split == 'train' and not self.opt.no_color_aug:       #自己写的数据集就不要用color_aug了
       color_aug(self._data_rng, inp, self._eig_val, self._eig_vec)
     inp = (inp - self.mean) / self.std
     inp = inp.transpose(2, 0, 1)
