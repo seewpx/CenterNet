@@ -9,14 +9,19 @@ import cv2
 
 from opts import opts
 from detectors.detector_factory import detector_factory
-
+from datasets.dataset_factory import get_dataset
 image_ext = ['jpg', 'jpeg', 'png', 'webp']
 video_ext = ['mp4', 'mov', 'avi', 'mkv']
 time_stats = ['tot', 'load', 'pre', 'net', 'dec', 'post', 'merge']
 
 def demo(opt):
   os.environ['CUDA_VISIBLE_DEVICES'] = opt.gpus_str
+  #print(opt.dataset)
   opt.debug = max(opt.debug, 1)
+  if opt.dataset == 'neu_det':
+    print('update dataset information...')
+    Dataset = get_dataset(opt.dataset, opt.task)
+    opt = opts().update_dataset_info_and_set_heads(opt, Dataset)
   Detector = detector_factory[opt.task]
   detector = Detector(opt)
 
@@ -43,7 +48,15 @@ def demo(opt):
           if ext in image_ext:
               image_names.append(os.path.join(opt.demo, file_name))
     else:
-      image_names = [opt.demo]
+      if opt.demo == 'neu' and opt.dataset == 'neu_det':
+        image_names = []
+        neu = Dataset(opt, 'val')
+        for img_id in neu.images:
+          file_name = neu.coco.loadImgs(ids=[img_id])[0]['file_name']
+          img_path = os.path.join(neu.img_dir, file_name)
+          image_names.append(img_path)
+      else:
+        image_names = [opt.demo]
     
     for (image_name) in image_names:
       ret = detector.run(image_name)

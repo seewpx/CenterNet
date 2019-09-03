@@ -35,7 +35,13 @@ dcn_v2_forward(const at::Tensor &input,
         AT_ERROR("Not compiled with GPU support");
 #endif
     }
-    AT_ERROR("Not implemented on the CPU");
+   // AT_ERROR("Not implemented on the CPU");
+   return dcn_v2_cpu_forward(input, weight, bias, offset, mask,
+                                   kernel_h, kernel_w,
+                                   stride_h, stride_w,
+                                   pad_h, pad_w,
+                                   dilation_h, dilation_w,
+                                   deformable_group);
 }
 
 std::vector<at::Tensor>

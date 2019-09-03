@@ -45,6 +45,8 @@ class Debugger(object):
       self.names = coco_class_name
     elif num_classes == 20 or dataset == 'pascal':
       self.names = pascal_class_name
+    elif num_classes == 6 or dataset == 'neu_det':
+      self.names = neu_class_name
     elif dataset == 'gta':
       self.names = gta_class_name
       self.focal_length = 935.3074360871937
@@ -245,7 +247,8 @@ class Debugger(object):
       prefix=idx
       np.savetxt(path + '/id.txt', np.ones(1) * (idx + 1), fmt='%d')
     for i, v in self.imgs.items():
-      cv2.imwrite(path + '/{}{}.png'.format(prefix, i), v)
+      print(path + '{}/{}.png'.format(prefix, i) + ' saved.')
+      cv2.imwrite(path + '{}/{}.png'.format(prefix, i), v)
 
   def remove_side(self, img_id, img):
     if not (img_id in self.imgs):
@@ -455,7 +458,8 @@ coco_class_name = [
      'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase',
      'scissors', 'teddy bear', 'hair drier', 'toothbrush'
 ]
-
+neu_class_name = ["crazing", "inclusion", "patches", 
+    "pitted_surface", "rolled-in_scale", "scratches"]
 color_list = np.array(
         [
             1.000, 1.000, 1.000,
