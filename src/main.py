@@ -83,7 +83,7 @@ def main(opt):
       if log_dict_val[opt.metric] < best:
         best = log_dict_val[opt.metric]
         save_model(os.path.join(opt.save_dir, 'model_best.pth'), 
-                   epoch, model)
+                   epoch, model, optimizer)   #加上optimizer，不加显示Drop parameter conv1.weight.
     else:
       save_model(os.path.join(opt.save_dir, 'model_last.pth'), 
                  epoch, model, optimizer)
